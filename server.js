@@ -2,45 +2,63 @@ const express = require('express');
 const dotenv = require('dotenv');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
+const cors = require('cors');
 
 dotenv.config();
-const app = express();
-const port = process.env.PORT || 3001;
 
-// Middleware to parse JSON
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Enable CORS (important for Swagger UI and external access)
+app.use(cors());
+
+// Parse JSON bodies
 app.use(express.json());
 
-// Swagger configuration
+// ---------------------
+// Swagger Configuration
+// ---------------------
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'Example Express API',
       version: '1.0.0',
-      description: 'A simple Express API with Swagger documentation',
+      description: 'A simple Express API with Swagger documentation and POST example.',
     },
     servers: [
       {
         url: `http://localhost:${port}`,
+        description: 'Local server',
       },
     ],
   },
-  apis: ['./server.js'], // Path to your API docs
+  apis: ['./server.js'], // Path to API docs (this file)
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-// Swagger UI route
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Serve Swagger docs UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
+
+// Serve raw Swagger JSON (fixes NetworkError)
+app.get('/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// ---------------------
+// Routes
+// ---------------------
 
 /**
  * @swagger
  * /:
  *   get:
- *     summary: Returns a simple greeting message
+ *     summary: Returns a greeting message.
  *     responses:
  *       200:
- *         description: Successful response
+ *         description: Returns a simple greeting.
  *         content:
  *           text/plain:
  *             schema:
@@ -55,10 +73,10 @@ app.get('/', (req, res) => {
  * @swagger
  * /health:
  *   get:
- *     summary: Health check endpoint
+ *     summary: Health check endpoint.
  *     responses:
  *       200:
- *         description: Server is healthy
+ *         description: Returns OK if server is running.
  *         content:
  *           text/plain:
  *             schema:
@@ -73,7 +91,7 @@ app.get('/health', (req, res) => {
  * @swagger
  * /api/data:
  *   post:
- *     summary: Accepts JSON data and returns it back
+ *     summary: Accepts and echoes back JSON data.
  *     requestBody:
  *       required: true
  *       content:
@@ -89,7 +107,7 @@ app.get('/health', (req, res) => {
  *                 example: 25
  *     responses:
  *       200:
- *         description: Echoes the received data
+ *         description: Returns the received JSON data.
  *         content:
  *           application/json:
  *             schema:
@@ -109,7 +127,10 @@ app.post('/api/data', (req, res) => {
   });
 });
 
+// ---------------------
+// Start Server
+// ---------------------
 app.listen(port, () => {
-  console.log(`✅ Server is running at http://localhost:${port}`);
-  console.log(`📘 Swagger docs available at http://localhost:${port}/api-docs`);
+  console.log(`✅ Server running at http://localhost:${port}`);
+  console.log(`📘 Swagger UI at http://localhost:${port}/api-docs`);
 });
